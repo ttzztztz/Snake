@@ -4,7 +4,7 @@
 #include<conio.h>
 #include<Windows.h>
 
-#define SCREEN_LENGTH 25
+#define SCREEN_LENGTH 12
 #define SNAKE_BODY "O"
 #define SNAKE_FOOD "Y"
 
@@ -20,18 +20,48 @@
 #define SCREEN_SNAKE 1
 #define SCREEN_EMPTY 0
 #define SCREEN_FOOD 2
+
+typedef struct Snake {
+	int x;
+	int y;
+	Snake* nextSnake;
+} Snake;
+
+typedef struct Food {
+	int x;
+	int y;
+} Food;
+
 typedef struct Point {
 	int x;
 	int y;
-} Point;
+}Point;
 
 int map[SCREEN_LENGTH][SCREEN_LENGTH];
-Point snakeBodyBegin;
-Point snakeBodyEnd;
+Food food;
+Snake* snakeHead = (Snake *)malloc(sizeof(Snake));
 
+int random(int max) {
+	return rand() % max;
+}
+void generateFood() {
+	food.x = -1;
+	food.y = -1;
+	while ( (food.x != -1 && food.y != -1) && (map[food.x][food.y] != SCREEN_EMPTY ) ) {
+		int x = random(SCREEN_LENGTH), y = random(SCREEN_LENGTH);
+		food.x = x;
+		food.y = y;
+	}
+	map[food.x][food.y] = SCREEN_FOOD;
+}
 void render() {
 	system("cls");
+	for (int b = 0; b <= SCREEN_LENGTH+1;b++) {
+		printf("-");
+	}
+	printf("\n");
 	for (int y = 0; y < SCREEN_LENGTH; y++) {
+		printf("|");
 		for (int x = 0; x < SCREEN_LENGTH; x++) {
 			switch (map[x][y]) {
 			case SCREEN_SNAKE: printf("%s", SNAKE_BODY); break;
@@ -39,24 +69,43 @@ void render() {
 			case SCREEN_FOOD: printf("%s", SNAKE_FOOD); break;
 			}
 		}
-		printf("\n");
+		printf("|\n");
+	}
+	for (int b = 0; b <= SCREEN_LENGTH+1; b++) {
+		printf("-");
 	}
 }
 int nextStep(int opt) {
-	Point nextPoint = snakeBodyBegin, nextLastPoint = snakeBodyEnd;
 	int result = RESULT_OK;
+	Point previousOffset;
+	previousOffset.x = snakeHead->x; previousOffset.y = snakeHead->y;
 	switch (opt) {
-	case MOVE_LEFT: nextPoint.x--; break;
-	case MOVE_RIGHT: nextPoint.x++; break;
-	case MOVE_UP: nextPoint.y++; break;
-	case MOVE_DOWN:nextPoint.y--; break;
+		case MOVE_LEFT: snakeHead->x--; break;
+		case MOVE_RIGHT: snakeHead->x++; break;
+		case MOVE_UP: snakeHead->y++; break;
+		case MOVE_DOWN:snakeHead->y--; break;
 	}
-	snakeBodyBegin = nextPoint;
+	Point previousTailOffset;
+	Snake* nowSnake = snakeHead->nextSnake;
+	while (nowSnake != NULL) {
+		if (nowSnake->nextSnake == NULL) {
+			previousTailOffset.x = nowSnake->x;
+			previousTailOffset.y = nowSnake->y;
+		}
+		int changeX = previousOffset.x, changeY = previousOffset.y;
+		previousOffset.x = nowSnake->x;
+		previousOffset.y = nowSnake->y;
+		nowSnake->x = changeX;
+		nowSnake->y = changeY;
+		nowSnake = nowSnake->nextSnake;
+	}
+	map[snakeHead->x][snakeHead->y] = SCREEN_SNAKE;
+	map[previousTailOffset.x][previousTailOffset.y] = SCREEN_EMPTY;
 
-	if (nextPoint.x >= SCREEN_LENGTH || nextPoint.y >= SCREEN_LENGTH) {
+	if (snakeHead->x >= SCREEN_LENGTH || snakeHead->y >= SCREEN_LENGTH) {
 		result = RESULT_DIE;
 	}
-	else if (map[nextPoint.x][nextPoint.y] == 2) {
+	else if (map[snakeHead->x][snakeHead->y] == 2) {
 		result = RESULT_EAT;
 	}
 	return result;
@@ -65,15 +114,19 @@ int main() {
 	int lastMove = MOVE_RIGHT;
 	int score = 0, speed = 1000, snakeLength = 2;
 
-	snakeBodyBegin.x = SCREEN_LENGTH / 2;
-	snakeBodyBegin.y = SCREEN_LENGTH / 2;
+	food.x = -1;
+	food.y = -1;
+	generateFood();
+	Snake* snakeBottom = (Snake *)malloc(sizeof(Snake));
+	snakeHead->x = SCREEN_LENGTH/2;
+	snakeHead->y = SCREEN_LENGTH / 2;
+	snakeBottom->x = SCREEN_LENGTH / 2 - 1;
+	snakeBottom->y = SCREEN_LENGTH / 2;
+	snakeBottom->nextSnake = NULL;
+	snakeHead->nextSnake = snakeBottom;
 
-	snakeBodyEnd.x = SCREEN_LENGTH / 2 - 1;
-	snakeBodyEnd.y = SCREEN_LENGTH / 2;
-
-	map[snakeBodyBegin.x][snakeBodyBegin.y] = SCREEN_SNAKE;
-	map[snakeBodyEnd.x][snakeBodyEnd.y] = SCREEN_SNAKE;
-
+	map[snakeHead->x][snakeHead->x] = SCREEN_SNAKE;
+	map[snakeBottom->x][snakeBottom->y] = SCREEN_SNAKE;
 	while (1) {
 		if (GetAsyncKeyState(VK_UP)) {
 			lastMove = MOVE_UP;
@@ -101,9 +154,19 @@ int main() {
 				score += score;
 			}
 			snakeLength++;
+			generateFood();
 		}
 		Sleep(speed);
 	}
+
+	Snake* nowSnake = snakeHead;
+	int ptr = 0;	
+	while (nowSnake!= NULL) {
+		Snake* previousSnake = nowSnake;
+		nowSnake = nowSnake->nextSnake;
+		free(previousSnake);
+	}
+	//todo: END SHOW RESULT
 	getchar();
 	return 0;
 }
