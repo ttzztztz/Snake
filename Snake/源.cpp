@@ -5,8 +5,9 @@
 #include<Windows.h>
 
 #define SCREEN_LENGTH 12
-#define SNAKE_BODY "O"
-#define SNAKE_FOOD "Y"
+#define SNAKE_BODY "¡ö"
+#define SNAKE_FOOD "¡ï"
+#define SNAKE_HEAD "¡ñ"
 
 #define MOVE_LEFT 0
 #define MOVE_RIGHT 1
@@ -35,46 +36,72 @@ typedef struct Food {
 typedef struct Point {
 	int x;
 	int y;
-}Point;
+} Point;
 
 int map[SCREEN_LENGTH][SCREEN_LENGTH];
 Food food;
 Snake* snakeHead = (Snake *)malloc(sizeof(Snake));
 
-int random(int max) {
+int randomNumber(int max) {
+	srand((int)time(0));
 	return rand() % max;
 }
+
 void generateFood() {
-	food.x = -1;
-	food.y = -1;
-	while ( (food.x != -1 && food.y != -1) && (map[food.x][food.y] != SCREEN_EMPTY ) ) {
-		int x = random(SCREEN_LENGTH), y = random(SCREEN_LENGTH);
+	do {
+		int x = randomNumber(SCREEN_LENGTH), y = randomNumber(SCREEN_LENGTH);
 		food.x = x;
 		food.y = y;
-	}
+	} while (food.x == -1 || food.y == -1 || map[food.x][food.y] != SCREEN_EMPTY);
 	map[food.x][food.y] = SCREEN_FOOD;
 }
+
 void render() {
 	system("cls");
-	for (int b = 0; b <= SCREEN_LENGTH+1;b++) {
-		printf("-");
+	printf("yzy tql \n");
+	for (int b = 0; b < SCREEN_LENGTH+2;b++) {
+		if (b == 0) {
+			printf("©°");
+		}
+		else if (b== SCREEN_LENGTH+1) {
+			printf("©´");
+		}
+		else {
+			printf("¡ª");
+		}
 	}
 	printf("\n");
 	for (int y = 0; y < SCREEN_LENGTH; y++) {
-		printf("|");
+		printf("©¦");
 		for (int x = 0; x < SCREEN_LENGTH; x++) {
 			switch (map[x][y]) {
-			case SCREEN_SNAKE: printf("%s", SNAKE_BODY); break;
-			case SCREEN_EMPTY: printf("%s", " "); break;
-			case SCREEN_FOOD: printf("%s", SNAKE_FOOD); break;
+				case SCREEN_SNAKE:
+					if (snakeHead->x == x && snakeHead->y ==y) {
+						printf("%s", SNAKE_HEAD);
+					}
+					else {
+						printf("%s", SNAKE_BODY);
+					}
+					break;
+				case SCREEN_EMPTY: printf("%s", "  "); break;
+				case SCREEN_FOOD: printf("%s", SNAKE_FOOD); break;
 			}
 		}
-		printf("|\n");
+		printf("©¦\n");
 	}
-	for (int b = 0; b <= SCREEN_LENGTH+1; b++) {
-		printf("-");
+	for (int b = 0; b < SCREEN_LENGTH+2; b++) {
+		if (b == 0) {
+			printf("©¸");
+		}
+		else if (b == SCREEN_LENGTH+1) {
+			printf("©¼");
+		}
+		else {
+			printf("¡ª");
+		}
 	}
 }
+
 int nextStep(int opt) {
 	int result = RESULT_OK;
 	Point previousOffset;
@@ -82,8 +109,12 @@ int nextStep(int opt) {
 	switch (opt) {
 		case MOVE_LEFT: snakeHead->x--; break;
 		case MOVE_RIGHT: snakeHead->x++; break;
-		case MOVE_UP: snakeHead->y++; break;
-		case MOVE_DOWN:snakeHead->y--; break;
+		case MOVE_UP: snakeHead->y--; break;
+		case MOVE_DOWN:snakeHead->y++; break;
+	}
+	if (map[snakeHead->x][snakeHead->y] == SCREEN_SNAKE) {
+		result = RESULT_DIE;
+		return result;
 	}
 	Point previousTailOffset;
 	Snake* nowSnake = snakeHead->nextSnake;
@@ -105,18 +136,20 @@ int nextStep(int opt) {
 	if (snakeHead->x >= SCREEN_LENGTH || snakeHead->y >= SCREEN_LENGTH) {
 		result = RESULT_DIE;
 	}
-	else if (map[snakeHead->x][snakeHead->y] == 2) {
+	else if (map[snakeHead->x][snakeHead->y] == SCREEN_FOOD) {
 		result = RESULT_EAT;
 	}
 	return result;
 }
+
 int main() {
+	printf("Press any key to Start the Game!\n");
+	getchar();
 	int lastMove = MOVE_RIGHT;
 	int score = 0, speed = 1000, snakeLength = 2;
 
 	food.x = -1;
 	food.y = -1;
-	generateFood();
 	Snake* snakeBottom = (Snake *)malloc(sizeof(Snake));
 	snakeHead->x = SCREEN_LENGTH/2;
 	snakeHead->y = SCREEN_LENGTH / 2;
@@ -127,6 +160,7 @@ int main() {
 
 	map[snakeHead->x][snakeHead->x] = SCREEN_SNAKE;
 	map[snakeBottom->x][snakeBottom->y] = SCREEN_SNAKE;
+	generateFood();
 	while (1) {
 		if (GetAsyncKeyState(VK_UP)) {
 			lastMove = MOVE_UP;
@@ -154,6 +188,7 @@ int main() {
 				score += score;
 			}
 			snakeLength++;
+			if (speed >= 300) speed *= 0.9;
 			generateFood();
 		}
 		Sleep(speed);
