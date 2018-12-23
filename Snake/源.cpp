@@ -18,9 +18,9 @@
 #define RESULT_EAT 2
 #define RESULT_DIE -1
 
-#define SCREEN_SNAKE 1
-#define SCREEN_EMPTY 0
-#define SCREEN_FOOD 2
+#define MAP_SNAKE 1
+#define MAP_EMPTY 0
+#define MAP_FOOD 2
 
 typedef struct Snake {
 	int x;
@@ -41,6 +41,7 @@ typedef struct Point {
 int map[SCREEN_LENGTH][SCREEN_LENGTH];
 Food food;
 Snake* snakeHead = (Snake *)malloc(sizeof(Snake));
+int score = 0, speed = 1000, snakeLength = 2;
 
 int randomNumber(int max) {
 	srand((int)time(0));
@@ -52,13 +53,14 @@ void generateFood() {
 		int x = randomNumber(SCREEN_LENGTH), y = randomNumber(SCREEN_LENGTH);
 		food.x = x;
 		food.y = y;
-	} while (food.x == -1 || food.y == -1 || map[food.x][food.y] != SCREEN_EMPTY);
-	map[food.x][food.y] = SCREEN_FOOD;
+	} while (food.x == -1 || food.y == -1 || map[food.x][food.y] != MAP_EMPTY);
+	map[food.x][food.y] = MAP_FOOD;
 }
 
 void render() {
 	system("cls");
 	printf("yzy tql \n");
+	printf("Your score : %d\nSnake Length : %d\n\n",score,snakeLength);
 	for (int b = 0; b < SCREEN_LENGTH+2;b++) {
 		if (b == 0) {
 			printf("©°");
@@ -67,7 +69,7 @@ void render() {
 			printf("©´");
 		}
 		else {
-			printf("¡ª");
+			printf("©¤©¤");
 		}
 	}
 	printf("\n");
@@ -75,7 +77,7 @@ void render() {
 		printf("©¦");
 		for (int x = 0; x < SCREEN_LENGTH; x++) {
 			switch (map[x][y]) {
-				case SCREEN_SNAKE:
+				case MAP_SNAKE:
 					if (snakeHead->x == x && snakeHead->y ==y) {
 						printf("%s", SNAKE_HEAD);
 					}
@@ -83,8 +85,8 @@ void render() {
 						printf("%s", SNAKE_BODY);
 					}
 					break;
-				case SCREEN_EMPTY: printf("%s", "  "); break;
-				case SCREEN_FOOD: printf("%s", SNAKE_FOOD); break;
+				case MAP_EMPTY: printf("%s", "  "); break;
+				case MAP_FOOD: printf("%s", SNAKE_FOOD); break;
 			}
 		}
 		printf("©¦\n");
@@ -97,13 +99,13 @@ void render() {
 			printf("©¼");
 		}
 		else {
-			printf("¡ª");
+			printf("©¤©¤");
 		}
 	}
 }
 
 int nextStep(int opt) {
-	int result = RESULT_OK;
+	int result = RESULT_OK , addLengthFlag = 0;
 	Point previousOffset;
 	previousOffset.x = snakeHead->x; previousOffset.y = snakeHead->y;
 	switch (opt) {
@@ -112,9 +114,13 @@ int nextStep(int opt) {
 		case MOVE_UP: snakeHead->y--; break;
 		case MOVE_DOWN:snakeHead->y++; break;
 	}
-	if (map[snakeHead->x][snakeHead->y] == SCREEN_SNAKE) {
+	if (map[snakeHead->x][snakeHead->y] == MAP_SNAKE) {
 		result = RESULT_DIE;
 		return result;
+	}
+	else if (map[snakeHead->x][snakeHead->y] == MAP_FOOD) {
+		result = RESULT_EAT;
+		addLengthFlag = 1;
 	}
 	Point previousTailOffset;
 	Snake* nowSnake = snakeHead->nextSnake;
@@ -130,14 +136,29 @@ int nextStep(int opt) {
 		nowSnake->y = changeY;
 		nowSnake = nowSnake->nextSnake;
 	}
-	map[snakeHead->x][snakeHead->y] = SCREEN_SNAKE;
-	map[previousTailOffset.x][previousTailOffset.y] = SCREEN_EMPTY;
+	map[snakeHead->x][snakeHead->y] = MAP_SNAKE;
 
-	if (snakeHead->x >= SCREEN_LENGTH || snakeHead->y >= SCREEN_LENGTH) {
-		result = RESULT_DIE;
+	if (addLengthFlag) {
+		map[previousTailOffset.x][previousTailOffset.y] =MAP_SNAKE;
+		Snake* ptrSnake = snakeHead->nextSnake;
+		while (ptrSnake->nextSnake != NULL) {
+			ptrSnake = ptrSnake->nextSnake;
+		}
+		Snake* newSnake = (Snake *)malloc(sizeof(Snake));
+		newSnake->x = previousTailOffset.x;
+		newSnake->y = previousTailOffset.y;
+		newSnake->nextSnake = NULL;
+		ptrSnake->nextSnake = newSnake;
 	}
-	else if (map[snakeHead->x][snakeHead->y] == SCREEN_FOOD) {
-		result = RESULT_EAT;
+	else {
+		map[previousTailOffset.x][previousTailOffset.y] = MAP_EMPTY;
+	}
+
+	if (result == RESULT_EAT) {
+		return result;
+	}
+	if (snakeHead->x >= SCREEN_LENGTH || snakeHead->y >= SCREEN_LENGTH || snakeHead->x < 0 || snakeHead->y < 0) {
+		result = RESULT_DIE;
 	}
 	return result;
 }
@@ -146,7 +167,6 @@ int main() {
 	printf("Press any key to Start the Game!\n");
 	getchar();
 	int lastMove = MOVE_RIGHT;
-	int score = 0, speed = 1000, snakeLength = 2;
 
 	food.x = -1;
 	food.y = -1;
@@ -158,8 +178,8 @@ int main() {
 	snakeBottom->nextSnake = NULL;
 	snakeHead->nextSnake = snakeBottom;
 
-	map[snakeHead->x][snakeHead->x] = SCREEN_SNAKE;
-	map[snakeBottom->x][snakeBottom->y] = SCREEN_SNAKE;
+	map[snakeHead->x][snakeHead->x] = MAP_SNAKE;
+	map[snakeBottom->x][snakeBottom->y] = MAP_SNAKE;
 	generateFood();
 	while (1) {
 		if (GetAsyncKeyState(VK_UP)) {
@@ -188,7 +208,7 @@ int main() {
 				score += score;
 			}
 			snakeLength++;
-			if (speed >= 300) speed *= 0.9;
+			if (speed >= 300) speed = speed * 9 / 10;
 			generateFood();
 		}
 		Sleep(speed);
@@ -201,7 +221,6 @@ int main() {
 		nowSnake = nowSnake->nextSnake;
 		free(previousSnake);
 	}
-	//todo: END SHOW RESULT
 	getchar();
 	return 0;
 }
