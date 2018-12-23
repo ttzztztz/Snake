@@ -59,7 +59,7 @@ void generateFood() {
 
 void render() {
 	system("cls");
-	printf("yzy tql \n");
+	//printf("yzy tql \n");
 	printf("Your score : %d\nSnake Length : %d\n\n",score,snakeLength);
 	for (int b = 0; b < SCREEN_LENGTH+2;b++) {
 		if (b == 0) {
